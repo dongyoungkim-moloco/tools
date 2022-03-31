@@ -13,6 +13,7 @@ func recurse(value interface{}) interface{} {
 	case string:
 		var obj interface{}
 		// Hack for determining whether target was a json string instead of a raw message
+		// This hack might convert JSON strings to other JSON types such as boolean (e.g. string literal "true")
 		if !json.Valid([]byte(vv)) {
 			return vv
 		}
