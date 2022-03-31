@@ -12,13 +12,13 @@ func recurse(value interface{}) interface{} {
 	switch vv := value.(type) {
 	case string:
 		var obj interface{}
+		// Hack for determining whether target was a json string instead of a raw message
+		if !json.Valid([]byte(vv)) {
+			return vv
+		}
 		err := json.Unmarshal([]byte(vv), &obj)
 		if err != nil {
 			log.Fatal(err)
-		}
-		// target was not a raw json message
-		if _, ok := obj.(string); ok {
-			return obj
 		}
 		// target was a raw json message and obj now holds a container
 		return recurse(obj)
