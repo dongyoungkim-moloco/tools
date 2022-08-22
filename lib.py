@@ -213,6 +213,6 @@ prod.bid.rendezvous = logical(prod.bid, "array_length(rendezvous.partition.submi
 prod_stream = types.SimpleNamespace()
 prod_stream.imp = partitioned('prod_stream', 'imp')
 prod_stream.cv = partitioned('prod_stream', 'cv')
-prod_stream.cv = partitioned('prod_stream', 'bid')
+prod_stream.bid  = partitioned('prod_stream', 'bid')
 prod_stream.cv.install = logical(prod_stream.cv, "cv.event = 'INSTALL'")
 
