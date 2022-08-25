@@ -1,7 +1,19 @@
+import types, datetime
+from google.cloud import bigquery
+import requests
+
+# QUERY MUST RETURN PLATFORM, ADVERTISER, CAMPAIGN
+  
+def active():
+  today =  datetime.datetime.today().strftime('%Y%m%d')
+  querystr = f'''
+select platform_name, advertiser_name, campaign_name
+from `focal-elf-631.prod.campaign_digest_merged_{today}` where inactive_since is null
+  '''
+  helper(querystr)
+  
+
 def most_recent_campaign_per_advertiser():
-  import types, datetime
-  from google.cloud import bigquery
-  import requests
   querystr = '''
   with keys as (
     select distinct campaign_id, advertiser_id, platform, timestamp
@@ -22,6 +34,9 @@ def most_recent_campaign_per_advertiser():
   select distinct last_val[OFFSET(1)] as platform, advertiser_id,  last_val[OFFSET(0)] as campaign
   from y
   '''
+  helper(querystr)
+
+def helper(querystr):
   import types, datetime, os
   from google.cloud import bigquery
   import requests
@@ -35,7 +50,7 @@ def most_recent_campaign_per_advertiser():
   # You can get token via https://github.com/moloco/marvel2/blob/3fa703a7e41ec00f030970e51c9987a13a14e5ba/go/src/alfred/README.md#issue-an-iap-token
   token = os.environ['TOKEN']
   
-  with open('most_recent_campaign_per_advertiser.json', 'w') as f:
+  with open('output.json', 'w') as f:
     f.write('[\n')
     first = True 
     prevFail = False
@@ -56,7 +71,8 @@ def most_recent_campaign_per_advertiser():
         f.write(resp.text)
         prevFail = False
       else:
+        print(f'Failed on {rowidx} th row : {platform_name}, {advertiser_name}, {campaign_name}')
         prevFail = True
     f.write('\n]\n')
   
-if __name__=='__main__': most_recent_campaign_per_advertiser()
+if __name__=='__main__': active()
