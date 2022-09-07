@@ -101,7 +101,8 @@ class Query:
 # These are just tools to generate a query statement string "( select * from XXX where SOME_DATE_RANGE )"
 # Because they are big and wasteful to store in cache
 class unpartitioned:
-  def __init__(self, dataset:str, table:str):
+  def __init__(self, project, dataset:str, table:str):
+    self.project = project
     self.dataset = dataset
     self.table = table
 
@@ -124,7 +125,7 @@ class unpartitioned:
     table_today = self.table + datetime.datetime.today().strftime('%Y%m%d')
     q = f'''
     select *
-    from {project}.{self.dataset}.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS
+    from {self.project}.{self.dataset}.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS
     where
       table_name ="{table_today}"
         '''
@@ -135,12 +136,14 @@ class unpartitioned:
 
   # e.g. focal-elf-631.prod.bid
   def __repr__(self):
-    return '.'.join([project, self.dataset, self.table])
+    return '.'.join([self.project, self.dataset, self.table])
 
 class partitioned:
-  def __init__(self, dataset:str, table:str):
+  def __init__(self, project, dataset:str, table:str, timestamp_column='timestamp'):
+    self.project = project
     self.dataset = dataset
     self.table = table
+    self.timestamp_column = timestamp_column
 
   def range(self, begin, end=None) -> str:
     if end is None:
@@ -154,7 +157,7 @@ class partitioned:
     query = f'''(
       select *
       from `{self}`
-      where timestamp BETWEEN  "{begin} 00:00:00" AND "{end} 23:59:59"
+      where DATE({self.timestamp_column}) BETWEEN  "{begin}" AND "{end}"
     )
     '''
 
@@ -166,7 +169,7 @@ class partitioned:
     select
     *
     from
-      {project}.{self.dataset}.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS
+      {self.project}.{self.dataset}.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS
     where
       table_name ="{self.table}"
         '''
@@ -177,7 +180,7 @@ class partitioned:
 
   # e.g. focal-elf-631.prod.bid
   def __repr__(self):
-    return '.'.join([project, self.dataset, self.table])
+    return '.'.join([self.project, self.dataset, self.table])
 
 class logical:
   def __init__(self, base, *clauses):
@@ -207,12 +210,14 @@ class logical:
     return self.base.schema()
 
 prod = types.SimpleNamespace()
-prod.bid = unpartitioned('prod','bid')
+prod.bid = unpartitioned(project, 'prod','bid')
 prod.bid.rendezvous = logical(prod.bid, "array_length(rendezvous.partition.submissions) > 1")
 
 prod_stream = types.SimpleNamespace()
-prod_stream.imp = partitioned('prod_stream', 'imp')
-prod_stream.cv = partitioned('prod_stream', 'cv')
-prod_stream.bid  = partitioned('prod_stream', 'bid')
+prod_stream.imp = partitioned(project, 'prod_stream', 'imp')
+prod_stream.cv = partitioned(project, 'prod_stream', 'cv')
+prod_stream.bid  = partitioned(project, 'prod_stream', 'bid')
 prod_stream.cv.install = logical(prod_stream.cv, "cv.event = 'INSTALL'")
 
+explab_profile = types.SimpleNamespace()
+explab_profile.dsp = partitioned('explab-298609', 'raw_profile', 'dsp_profile', 'created_at')
